@@ -16,3 +16,15 @@ artifacts/
 *.sqlite
 *.sqlite3
 .DS_Store
+
+# Tooling and editor caches
+.cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.ipynb_checkpoints/
+coverage.xml
+*.log
+.idea/
+.vscode/
