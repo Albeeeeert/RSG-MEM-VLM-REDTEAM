@@ -13,6 +13,7 @@ from .engine import RSGMemEngine
 from .graph import RelationalStrategyGraph
 from .lifecycle import LifecycleManager
 from .memory import ExperienceMemory
+from .prompting import PromptLibrary
 from .providers.mock import (
     MockConsistencyChecker,
     MockJudge,
@@ -33,6 +34,7 @@ class Runtime:
     graph: RelationalStrategyGraph
     memory: ExperienceMemory
     engine: RSGMemEngine
+    prompts: PromptLibrary
 
     def close(self) -> None:
         for component in (
@@ -54,10 +56,10 @@ class Runtime:
         self.close()
 
 
-def _strategy_agent(settings: ProviderSettings):
+def _strategy_agent(settings: ProviderSettings, prompts: PromptLibrary):
     if settings.type == "mock":
         return RuleBasedStrategyAgent()
-    return OpenAICompatibleStrategyAgent(settings)
+    return OpenAICompatibleStrategyAgent(settings, prompts)
 
 
 def _target(settings: ProviderSettings):
@@ -66,16 +68,16 @@ def _target(settings: ProviderSettings):
     return OpenAICompatibleTarget(settings)
 
 
-def _judge(settings: ProviderSettings):
+def _judge(settings: ProviderSettings, prompts: PromptLibrary):
     if settings.type == "mock":
         return MockJudge()
-    return OpenAICompatibleJudge(settings)
+    return OpenAICompatibleJudge(settings, prompts)
 
 
-def _consistency(settings: ProviderSettings):
+def _consistency(settings: ProviderSettings, prompts: PromptLibrary):
     if settings.type == "mock":
         return MockConsistencyChecker()
-    return OpenAICompatibleConsistencyChecker(settings)
+    return OpenAICompatibleConsistencyChecker(settings, prompts)
 
 
 def create_runtime(config: AppConfig) -> Runtime:
@@ -83,6 +85,7 @@ def create_runtime(config: AppConfig) -> Runtime:
     graph = RelationalStrategyGraph.load(config.graph_path)
     memory = ExperienceMemory(config.memory_path)
     embedder = HashingEmbedder(config.embedding_dimension)
+    prompts = PromptLibrary(config.prompt_dir)
     controller = GraphController(
         graph,
         memory,
@@ -96,12 +99,18 @@ def create_runtime(config: AppConfig) -> Runtime:
         memory=memory,
         embedder=embedder,
         controller=controller,
-        strategy_agent=_strategy_agent(config.strategy_agent),
+        strategy_agent=_strategy_agent(config.strategy_agent, prompts),
         actuator=MultimodalActuator(config.artifacts_dir),
         target=_target(config.target),
-        judge=_judge(config.judge),
-        consistency_checker=_consistency(config.consistency),
+        judge=_judge(config.judge, prompts),
+        consistency_checker=_consistency(config.consistency, prompts),
         credit_assigner=CreditAssigner(graph, memory),
         lifecycle_manager=LifecycleManager(graph, config.lifecycle),
     )
-    return Runtime(config=config, graph=graph, memory=memory, engine=engine)
+    return Runtime(
+        config=config,
+        graph=graph,
+        memory=memory,
+        engine=engine,
+        prompts=prompts,
+    )

@@ -38,7 +38,7 @@ The full research-method specification is in [`docs/METHOD.md`](docs/METHOD.md).
 Sample context ──> multimodal memory retrieval ──> active strategy subgraph
                                                         │
                                                         ▼
-                    REUSE / REFINE / COMPOSE / INVENT controller
+                    REUSE / REFINE / COMPOSE / INVENT controller + agent advisor
                                                         │
                                                         ▼
                                   strategy designer + multimodal actuator
@@ -52,6 +52,51 @@ Sample context ──> multimodal memory retrieval ──> active strategy subgr
                                                         ▼
                                  credit assignment + graph/memory update
                                                         └─────── loop
+```
+
+## How the agent participates
+
+The default `configs/mock.yaml` uses a deterministic `RuleBasedStrategyAgent`; it does **not**
+call an LLM. This keeps tests offline, but it can make the agent layer look invisible. With an
+`openai_compatible` strategy provider, every search round performs the following agent loop:
+
+1. the controller retrieves cross-sample memories and builds graph candidates;
+2. the **action advisor** ranks `REUSE`, `REFINE`, `COMPOSE`, and `INVENT` candidates;
+3. graph utility and agent advice are fused using `agent.advisor_weight`;
+4. the **strategy designer** creates a refinement, composition, or new abstract strategy;
+5. the **test-case realizer** converts it into an image-text instance;
+6. the **consistency checker** can trigger the **repair agent** before a target query;
+7. the **response judge** classifies feedback, which is written back to graph and memory.
+
+The six editable prompts are versioned in
+[`src/rsg_mem/prompt_templates/`](src/rsg_mem/prompt_templates/). Inspect them directly:
+
+```bash
+PYTHONPATH=src python -m rsg_mem prompts
+PYTHONPATH=src python -m rsg_mem prompts --show action_advisor
+PYTHONPATH=src python -m rsg_mem prompts --show strategy_designer
+```
+
+The advisor receives structured evidence rather than an unbounded transcript: candidate scores,
+local graph nodes and relations, retrieved successes and failures, recent target feedback, failure
+signature, stagnation count, and remaining query budget. Its output is validated against the
+candidate IDs before it can affect selection. The fusion weight and evidence limits are configured
+as follows:
+
+```yaml
+agent:
+  enabled: true
+  advisor_weight: 0.35
+  memory_items: 5
+  recent_attempts: 4
+  graph_nodes: 12
+```
+
+To override prompts for an experiment, copy any or all six same-name Markdown files to another
+directory and set `prompt_dir` in the YAML config. Missing override files fall back to built-ins:
+
+```yaml
+prompt_dir: ../prompt_overrides
 ```
 
 ## Quick start
@@ -128,9 +173,9 @@ providers:
     api_key_env: JUDGE_API_KEY
 ```
 
-The framework sends local images as base64 data URLs. Strategy generation,
-realization, consistency checking, and judging use strict JSON schemas with
-defensive parsing.
+The `strategy_agent` model performs action advising, abstract strategy design, concrete
+test-case realization, and local repair. The framework sends local images as base64 data URLs;
+agent, consistency, and judge outputs use structured JSON with defensive parsing.
 
 ## Tests
 
@@ -156,6 +201,8 @@ src/rsg_mem/
 ├── lifecycle.py             # promotion/retirement/reactivation
 ├── memory.py                # SQLite experience/posterior memory
 ├── models.py                # shared typed records
+├── prompting.py             # prompt loading and override support
+├── prompt_templates/        # six versioned agent/evaluator prompts
 └── providers/               # mock and OpenAI-compatible adapters
 ```
 

@@ -69,7 +69,8 @@ class MemoryTests(unittest.TestCase):
         )
         self.assertEqual(retrieved[0][0].experience_id, experience.experience_id)
         self.assertGreater(retrieved[0][1], 0.5)
-        self.assertEqual(self.memory.get_experience(experience.experience_id).response.text, "controlled response")
+        restored = self.memory.get_experience(experience.experience_id)
+        self.assertEqual(restored.response.text, "controlled response")
 
     def test_contextual_and_pair_posteriors(self):
         key = self.context.context_key()

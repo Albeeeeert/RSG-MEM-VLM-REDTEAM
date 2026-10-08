@@ -75,7 +75,11 @@ class GraphController:
     ) -> list[str]:
         seeds: list[str] = []
         for experience, _ in retrieved:
-            seeds.extend(identifier for identifier in experience.strategy_ids if self.graph.has_strategy(identifier))
+            seeds.extend(
+                identifier
+                for identifier in experience.strategy_ids
+                if self.graph.has_strategy(identifier)
+            )
         identifiers = self.graph.local_strategy_ids(
             seeds,
             hops=self.settings.local_graph_hops,
@@ -128,7 +132,10 @@ class GraphController:
                     CandidateAction(
                         mode=ActionMode.REFINE,
                         strategy_ids=(identifier,),
-                        rationale=f"repair observed failure: {(failure or FailureType.NO_PROGRESS).value}",
+                        rationale=(
+                            "repair observed failure: "
+                            f"{(failure or FailureType.NO_PROGRESS).value}"
+                        ),
                         estimated_cost=1.35,
                     )
                 )
@@ -144,7 +151,10 @@ class GraphController:
             reverse=True,
         )
         for left, right in pairs:
-            if len([candidate for candidate in candidates if candidate.mode == ActionMode.COMPOSE]) >= self.settings.compose_candidates:
+            composition_count = sum(
+                candidate.mode == ActionMode.COMPOSE for candidate in candidates
+            )
+            if composition_count >= self.settings.compose_candidates:
                 break
             if self.graph.composition_allowed(left, right, self.settings.conflict_limit):
                 candidates.append(
@@ -181,7 +191,9 @@ class GraphController:
                 stagnation,
                 failure,
             )
-        candidates.sort(key=lambda candidate: (candidate.utility, candidate.action_id), reverse=True)
+        candidates.sort(
+            key=lambda candidate: (candidate.utility, candidate.action_id), reverse=True
+        )
         return candidates
 
     def _score(
@@ -298,7 +310,34 @@ class GraphController:
         candidate.utility = utility
 
     @staticmethod
-    def select(candidates: list[CandidateAction]) -> CandidateAction:
+    def select(
+        candidates: list[CandidateAction],
+        advisor_scores: dict[str, float] | None = None,
+        advisor_weight: float = 0.0,
+    ) -> CandidateAction:
         if not candidates:
             raise RuntimeError("controller generated no candidate actions")
-        return max(candidates, key=lambda candidate: (candidate.utility, candidate.action_id))
+        if not advisor_scores or advisor_weight <= 0.0:
+            return max(candidates, key=lambda candidate: (candidate.utility, candidate.action_id))
+        weight = max(0.0, min(1.0, advisor_weight))
+        utilities = [candidate.utility for candidate in candidates]
+        low, high = min(utilities), max(utilities)
+        span = high - low
+        for candidate in candidates:
+            graph_score = (candidate.utility - low) / span if span > 1e-12 else 0.5
+            agent_score = max(
+                0.0, min(1.0, float(advisor_scores.get(candidate.action_id, 0.0)))
+            )
+            candidate.component_scores["graph_normalized"] = graph_score
+            candidate.component_scores["agent_advice"] = agent_score
+            candidate.component_scores["combined"] = (
+                (1.0 - weight) * graph_score + weight * agent_score
+            )
+        return max(
+            candidates,
+            key=lambda candidate: (
+                candidate.component_scores["combined"],
+                candidate.utility,
+                candidate.action_id,
+            ),
+        )

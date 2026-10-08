@@ -35,6 +35,9 @@ rsg-mem = "rsg_mem.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"rsg_mem.prompt_templates" = ["*.md"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

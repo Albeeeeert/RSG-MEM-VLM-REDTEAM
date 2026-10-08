@@ -58,6 +58,15 @@ class EvaluationSettings:
 
 
 @dataclass(slots=True)
+class AgentSettings:
+    enabled: bool = True
+    advisor_weight: float = 0.35
+    memory_items: int = 5
+    recent_attempts: int = 4
+    graph_nodes: int = 12
+
+
+@dataclass(slots=True)
 class ProviderSettings:
     type: str = "mock"
     base_url: str = ""
@@ -81,6 +90,8 @@ class AppConfig:
     search: SearchSettings = field(default_factory=SearchSettings)
     lifecycle: LifecycleSettings = field(default_factory=LifecycleSettings)
     evaluation: EvaluationSettings = field(default_factory=EvaluationSettings)
+    agent: AgentSettings = field(default_factory=AgentSettings)
+    prompt_dir: Path | None = None
     strategy_agent: ProviderSettings = field(default_factory=ProviderSettings)
     target: ProviderSettings = field(default_factory=ProviderSettings)
     judge: ProviderSettings = field(default_factory=ProviderSettings)
@@ -110,6 +121,12 @@ def _resolve_run_dir(value: str | Path, config_path: Path | None) -> Path:
     return (config_path.parent / path).resolve()
 
 
+def _resolve_optional_dir(value: str | Path | None, config_path: Path) -> Path | None:
+    if not value:
+        return None
+    return _resolve_run_dir(value, config_path)
+
+
 def load_config(path: str | Path) -> AppConfig:
     config_path = Path(path).expanduser().resolve()
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
@@ -121,6 +138,8 @@ def load_config(path: str | Path) -> AppConfig:
         search=SearchSettings(**raw.get("search", {})),
         lifecycle=LifecycleSettings(**raw.get("lifecycle", {})),
         evaluation=EvaluationSettings(**raw.get("evaluation", {})),
+        agent=AgentSettings(**raw.get("agent", {})),
+        prompt_dir=_resolve_optional_dir(raw.get("prompt_dir"), config_path),
         strategy_agent=ProviderSettings.from_dict(providers.get("strategy_agent")),
         target=ProviderSettings.from_dict(providers.get("target")),
         judge=ProviderSettings.from_dict(providers.get("judge")),
@@ -143,6 +162,14 @@ def validate_config(config: AppConfig) -> None:
         raise ValueError("conflict_limit must be in [0, 1]")
     if not 0.0 <= config.search.duplicate_threshold <= 1.0:
         raise ValueError("duplicate_threshold must be in [0, 1]")
+    if not 0.0 <= config.agent.advisor_weight <= 1.0:
+        raise ValueError("agent.advisor_weight must be in [0, 1]")
+    if min(
+        config.agent.memory_items,
+        config.agent.recent_attempts,
+        config.agent.graph_nodes,
+    ) < 0:
+        raise ValueError("agent evidence limits cannot be negative")
     for name, provider in (
         ("strategy_agent", config.strategy_agent),
         ("target", config.target),

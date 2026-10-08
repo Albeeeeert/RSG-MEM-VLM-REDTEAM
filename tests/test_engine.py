@@ -50,6 +50,12 @@ class EngineTests(unittest.TestCase):
                 self.assertEqual(runtime.memory.count(), result.target_queries)
                 self.assertGreater(len(runtime.graph), 4)
                 self.assertEqual(result.trace[0]["action"]["mode"], "compose")
+                self.assertIsNotNone(result.trace[0]["agent_decision"])
+                self.assertIn("action_scores", result.trace[0]["agent_decision"])
+                self.assertGreaterEqual(result.trace[0]["cost"]["agent_calls"], 3)
+                self.assertEqual(
+                    result.trace[0]["agent_evidence_summary"]["graph_nodes"], 4
+                )
                 self.assertGreater(
                     runtime.graph.stats()["relation_types"]["composed_from"], 0
                 )

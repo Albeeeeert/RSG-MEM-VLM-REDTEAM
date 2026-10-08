@@ -13,6 +13,9 @@ class ConfigAndProviderTests(unittest.TestCase):
         seeds = load_seed_file(root / "examples" / "seeds.yaml")
         samples = load_samples(root / "examples" / "samples.jsonl")
         self.assertTrue(config.run_dir.is_absolute())
+        self.assertTrue(config.agent.enabled)
+        self.assertAlmostEqual(config.agent.advisor_weight, 0.35)
+        self.assertIsNone(config.prompt_dir)
         self.assertEqual(len(seeds.strategies), 4)
         self.assertEqual(len(samples), 2)
 

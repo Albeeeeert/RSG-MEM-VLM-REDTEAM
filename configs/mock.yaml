@@ -2,6 +2,13 @@ run_dir: ../runs/mock
 random_seed: 7
 embedding_dimension: 256
 
+agent:
+  enabled: true
+  advisor_weight: 0.35
+  memory_items: 5
+  recent_attempts: 4
+  graph_nodes: 12
+
 search:
   max_target_queries: 8
   max_repairs: 2

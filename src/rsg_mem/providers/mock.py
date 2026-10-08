@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Sequence
+from typing import Any, Sequence
 
 from ..config import EvaluationSettings
 from ..models import (
     ActionMode,
+    AgentDecision,
     CandidateAction,
     ConsistencyResult,
     EvaluationResult,
@@ -23,12 +24,49 @@ from ..models import (
 class RuleBasedStrategyAgent:
     """Creates abstract strategy programs without any external model calls."""
 
+    def advise(
+        self,
+        candidates: Sequence[CandidateAction],
+        context: SampleContext,
+        evidence: dict[str, Any],
+    ) -> AgentDecision:
+        if not candidates:
+            raise ValueError("advisor requires at least one candidate")
+        utilities = [candidate.utility for candidate in candidates]
+        low, high = min(utilities), max(utilities)
+        span = high - low
+        scores = {
+            candidate.action_id: (
+                (candidate.utility - low) / span if span > 1e-12 else 0.5
+            )
+            for candidate in candidates
+        }
+        selected = max(
+            candidates,
+            key=lambda candidate: (scores[candidate.action_id], candidate.action_id),
+        )
+        memory_references = tuple(
+            item["experience_id"]
+            for item in evidence.get("retrieved_memories", [])[:2]
+            if item.get("experience_id")
+        )
+        return AgentDecision(
+            selected_action_id=selected.action_id,
+            action_scores=scores,
+            rationale=(
+                "deterministic mock advisor follows graph utility and available memory evidence"
+            ),
+            memory_references=memory_references,
+            raw={"provider": "mock", "sample_id": context.sample_id},
+        )
+
     def design(
         self,
         action: CandidateAction,
         context: SampleContext,
         parents: Sequence[StrategyNode],
         failure: FailureType | None,
+        evidence: dict[str, Any],
     ) -> StrategySpec:
         if action.mode == ActionMode.REUSE:
             if len(parents) != 1:
@@ -115,6 +153,7 @@ class RuleBasedStrategyAgent:
         action: CandidateAction,
         context: SampleContext,
         attempt_index: int,
+        evidence: dict[str, Any],
     ) -> TestCase:
         steps = "; ".join(strategy.spec.execution_plan) or strategy.spec.description
         prompt = (
@@ -144,6 +183,7 @@ class RuleBasedStrategyAgent:
         check: ConsistencyResult,
         strategy: StrategyNode,
         context: SampleContext,
+        evidence: dict[str, Any],
     ) -> TestCase:
         repaired = TestCase.from_dict(test_case.to_dict())
         repaired.prompt = (
@@ -248,5 +288,9 @@ class MockConsistencyChecker:
             strategy_realized=strategy_realized,
             cross_modal_consistent=cross_modal,
             perceptible=perceptible,
-            rationale="mock consistency check" if valid else "missing goal, strategy, or image context",
+            rationale=(
+                "mock consistency check"
+                if valid
+                else "missing goal, strategy, or image context"
+            ),
         )

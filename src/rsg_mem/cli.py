@@ -12,6 +12,7 @@ from .config import load_config
 from .dataio import load_samples, load_seed_file, write_json
 from .factory import create_runtime
 from .models import SampleContext
+from .prompting import PROMPT_NAMES, PromptLibrary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +34,7 @@ def _summary(runtime, results) -> dict:
         },
         "graph": runtime.graph.stats(),
         "memory": runtime.memory.stats(),
+        "prompts": runtime.prompts.manifest(),
     }
 
 
@@ -84,6 +86,7 @@ def command_inspect(args: argparse.Namespace) -> int:
             "run_dir": str(config.run_dir),
             "graph": runtime.graph.stats(),
             "memory": runtime.memory.stats(),
+            "prompts": runtime.prompts.manifest(),
             "recent_experiences": [
                 experience.to_dict() for experience in runtime.memory.recent(args.limit)
             ],
@@ -99,6 +102,11 @@ def command_validate(args: argparse.Namespace) -> int:
             {
                 "valid": True,
                 "run_dir": str(config.run_dir),
+                "agent": {
+                    "enabled": config.agent.enabled,
+                    "advisor_weight": config.agent.advisor_weight,
+                    "prompt_dir": str(config.prompt_dir) if config.prompt_dir else "built-in",
+                },
                 "providers": {
                     "strategy_agent": config.strategy_agent.type,
                     "target": config.target.type,
@@ -110,6 +118,15 @@ def command_validate(args: argparse.Namespace) -> int:
             sort_keys=True,
         )
     )
+    return 0
+
+
+def command_prompts(args: argparse.Namespace) -> int:
+    library = PromptLibrary(args.prompt_dir)
+    if args.show:
+        print(library.get(args.show))
+    else:
+        print(json.dumps(library.manifest(), ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 
 
@@ -142,6 +159,11 @@ def build_parser() -> argparse.ArgumentParser:
     validate = subparsers.add_parser("validate-config", help="validate a configuration")
     validate.add_argument("--config", required=True, help="YAML configuration")
     validate.set_defaults(handler=command_validate)
+
+    prompts = subparsers.add_parser("prompts", help="list or print agent prompt templates")
+    prompts.add_argument("--show", choices=PROMPT_NAMES, help="print one prompt template")
+    prompts.add_argument("--prompt-dir", help="optional directory containing prompt overrides")
+    prompts.set_defaults(handler=command_prompts)
     return parser
 
 

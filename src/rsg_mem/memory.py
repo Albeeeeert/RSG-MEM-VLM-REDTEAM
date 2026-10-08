@@ -388,12 +388,16 @@ class ExperienceMemory:
 
     def stats(self) -> dict[str, int]:
         success = int(
-            self._connection.execute("SELECT COUNT(*) FROM experiences WHERE success = 1").fetchone()[0]
+            self._connection.execute(
+                "SELECT COUNT(*) FROM experiences WHERE success = 1"
+            ).fetchone()[0]
         )
         strategy_rows = int(
             self._connection.execute("SELECT COUNT(*) FROM strategy_posteriors").fetchone()[0]
         )
-        pair_rows = int(self._connection.execute("SELECT COUNT(*) FROM pair_posteriors").fetchone()[0])
+        pair_rows = int(
+            self._connection.execute("SELECT COUNT(*) FROM pair_posteriors").fetchone()[0]
+        )
         return {
             "experiences": self.count(),
             "successful_experiences": success,

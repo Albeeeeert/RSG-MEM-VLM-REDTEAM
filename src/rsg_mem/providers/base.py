@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Protocol, Sequence
+from typing import Any, Protocol, Sequence
 
 from ..config import EvaluationSettings
 from ..models import (
+    AgentDecision,
     CandidateAction,
     ConsistencyResult,
     EvaluationResult,
@@ -19,12 +20,20 @@ from ..models import (
 
 
 class StrategyAgent(Protocol):
+    def advise(
+        self,
+        candidates: Sequence[CandidateAction],
+        context: SampleContext,
+        evidence: dict[str, Any],
+    ) -> AgentDecision: ...
+
     def design(
         self,
         action: CandidateAction,
         context: SampleContext,
         parents: Sequence[StrategyNode],
         failure: FailureType | None,
+        evidence: dict[str, Any],
     ) -> StrategySpec: ...
 
     def realize(
@@ -33,6 +42,7 @@ class StrategyAgent(Protocol):
         action: CandidateAction,
         context: SampleContext,
         attempt_index: int,
+        evidence: dict[str, Any],
     ) -> TestCase: ...
 
     def repair(
@@ -41,6 +51,7 @@ class StrategyAgent(Protocol):
         check: ConsistencyResult,
         strategy: StrategyNode,
         context: SampleContext,
+        evidence: dict[str, Any],
     ) -> TestCase: ...
 
 

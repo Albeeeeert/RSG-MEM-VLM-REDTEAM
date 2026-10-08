@@ -252,6 +252,26 @@ class CandidateAction:
 
 
 @dataclass(slots=True)
+class AgentDecision:
+    """Structured advice returned by the graph-aware planning agent."""
+
+    selected_action_id: str
+    action_scores: dict[str, float]
+    rationale: str = ""
+    memory_references: tuple[str, ...] = ()
+    raw: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "selected_action_id": self.selected_action_id,
+            "action_scores": self.action_scores,
+            "rationale": self.rationale,
+            "memory_references": list(self.memory_references),
+            "raw": self.raw,
+        }
+
+
+@dataclass(slots=True)
 class TestCase:
     prompt: str
     strategy_id: str

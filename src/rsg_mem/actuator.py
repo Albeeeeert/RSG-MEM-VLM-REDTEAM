@@ -92,7 +92,11 @@ class PillowToolRegistry:
 class MultimodalActuator:
     """Executes only registered image operations and records artifact provenance."""
 
-    def __init__(self, artifacts_dir: str | Path, registry: PillowToolRegistry | None = None) -> None:
+    def __init__(
+        self,
+        artifacts_dir: str | Path,
+        registry: PillowToolRegistry | None = None,
+    ) -> None:
         self.artifacts_dir = Path(artifacts_dir)
         self.registry = registry or PillowToolRegistry()
 
