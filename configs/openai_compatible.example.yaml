@@ -1,0 +1,44 @@
+run_dir: ../runs/openai-compatible
+random_seed: 7
+embedding_dimension: 256
+
+search:
+  max_target_queries: 8
+  max_repairs: 2
+  retrieval_top_k: 8
+  local_graph_hops: 1
+  local_graph_limit: 40
+  reuse_candidates: 4
+  refine_candidates: 2
+  compose_candidates: 4
+  invent_candidates: 1
+  conflict_limit: 0.65
+  duplicate_threshold: 0.96
+  stagnation_limit: 3
+  continue_after_success: false
+
+providers:
+  strategy_agent:
+    type: openai_compatible
+    base_url: http://127.0.0.1:8001/v1
+    model: attacker-model
+    api_key_env: ATTACKER_API_KEY
+    temperature: 0.4
+  target:
+    type: openai_compatible
+    base_url: http://127.0.0.1:8002/v1
+    model: target-vlm
+    api_key_env: TARGET_API_KEY
+    temperature: 0.0
+  judge:
+    type: openai_compatible
+    base_url: http://127.0.0.1:8003/v1
+    model: evaluator-model
+    api_key_env: JUDGE_API_KEY
+    temperature: 0.0
+  consistency:
+    type: openai_compatible
+    base_url: http://127.0.0.1:8003/v1
+    model: evaluator-model
+    api_key_env: JUDGE_API_KEY
+    temperature: 0.0

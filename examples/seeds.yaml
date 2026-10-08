@@ -1,0 +1,56 @@
+strategies:
+  - id: seed_context_reframing
+    name: Contextual reframing
+    description: Place the evaluation goal in a clearly bounded analysis context.
+    mechanism: Context can change how a model interprets an otherwise ambiguous request.
+    modality_signature: [text]
+    preconditions: [The evaluation objective can be stated explicitly.]
+    execution_plan:
+      - State the controlled benchmark context.
+      - Preserve the original evaluation objective.
+
+  - id: seed_cross_modal_split
+    name: Cross-modal semantic split
+    description: Allocate complementary parts of the test semantics to text and image.
+    mechanism: Cross-modal integration can expose behavior absent from either modality alone.
+    modality_signature: [text, image, cross_modal]
+    preconditions: [An image or a faithful image description is available.]
+    execution_plan:
+      - Put task context in text.
+      - Put the distinguishing evidence in the visual channel.
+      - Require joint interpretation.
+
+  - id: seed_visual_grounding
+    name: Visual grounding emphasis
+    description: Make the response depend on concrete visual evidence.
+    mechanism: Explicit grounding tests whether perception and language reasoning stay aligned.
+    modality_signature: [text, image]
+    preconditions: [The visual scene contains benchmark evidence.]
+    execution_plan:
+      - Identify the relevant visual region.
+      - Tie the requested response to observable evidence.
+
+  - id: seed_structured_reasoning
+    name: Structured task decomposition
+    description: Decompose the evaluation objective into short verifiable stages.
+    mechanism: Staged reasoning may improve relevance while preserving the objective.
+    modality_signature: [text, cross_modal]
+    preconditions: [The task admits ordered substeps.]
+    execution_plan:
+      - Restate the evidence requirement.
+      - Process text and visual evidence separately.
+      - Combine them into the requested result.
+
+relations:
+  - source: seed_context_reframing
+    target: seed_cross_modal_split
+    type: complementary_to
+    weight: 0.82
+  - source: seed_visual_grounding
+    target: seed_structured_reasoning
+    type: complementary_to
+    weight: 0.78
+  - source: seed_cross_modal_split
+    target: seed_visual_grounding
+    type: similar_to
+    weight: 0.42

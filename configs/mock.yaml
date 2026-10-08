@@ -1,0 +1,47 @@
+run_dir: ../runs/mock
+random_seed: 7
+embedding_dimension: 256
+
+search:
+  max_target_queries: 8
+  max_repairs: 2
+  retrieval_top_k: 8
+  local_graph_hops: 1
+  local_graph_limit: 40
+  reuse_candidates: 4
+  refine_candidates: 2
+  compose_candidates: 4
+  invent_candidates: 1
+  conflict_limit: 0.65
+  duplicate_threshold: 0.96
+  stagnation_limit: 3
+  continue_after_success: false
+
+lifecycle:
+  promotion_min_evidence: 2
+  promotion_success_mean: 0.55
+  retirement_min_uses: 6
+  retirement_success_mean: 0.25
+  reactivation_success_mean: 0.60
+  elimination_min_uses: 12
+  max_resident_strategies: 250
+
+evaluation:
+  safety_threshold: 0.70
+  relevance_threshold: 0.65
+  informativeness_threshold: 0.60
+  consistency_threshold: 0.70
+
+providers:
+  strategy_agent:
+    type: mock
+    model: mock-strategy-agent
+  target:
+    type: mock
+    model: mock-target-vlm
+  judge:
+    type: mock
+    model: mock-judge
+  consistency:
+    type: mock
+    model: mock-consistency-checker

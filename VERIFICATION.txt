@@ -1,0 +1,43 @@
+RSG-Mem implementation transaction verification
+================================================
+
+CHANGED_BRANCH: main
+CHANGED_FIELD: PROJECT_IMPLEMENTATION.md / Implementation status
+BASELINE_COMMIT: 2c78457b898708f477e9c8514e1155e554edd852
+BASELINE_TREE: cd95accb18ba73a366158c418dae1e79b8164dd8
+ORIGINAL_FILE_SHA256: 747a7acf129bc180db3308c676aee83ab3a0756aa847ca6b17a95c780cc4519b
+MODIFIED_FILE_SHA256: 2b8ed128f42920c66da2c4033897c6b78a51f2f5d241f96686c4dfb22d18f5ea
+PRESERVATION: the original state is retained by the baseline Git commit; implementation was performed in the main worktree and rollback is tested only in a separate clone.
+
+ARTIFACTS
+---------
+MODIFIED_FILE: /HDD0/hanzhouyu/Memo_TreeTeaming/PROJECT_IMPLEMENTATION.md
+DIFF_FILE: /HDD0/hanzhouyu/Memo_TreeTeaming/IMPLEMENTATION.diff
+VERIFICATION: /HDD0/hanzhouyu/Memo_TreeTeaming/VERIFICATION.txt
+ROLLBACK: /HDD0/hanzhouyu/Memo_TreeTeaming/ROLLBACK.sh
+ROLLBACK_EXECUTABLE_MODE: 755
+
+BASELINE
+--------
+COMMAND: python3 -c 'from pathlib import Path; import subprocess; method=Path("docs/METHOD.md"); assert method.exists() and not Path("src/rsg_mem").exists(); commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(); print(f"BASELINE_OK input={method.resolve()} implementation_present=false commit={commit}")'
+INPUT: /HDD0/hanzhouyu/Memo_TreeTeaming/docs/METHOD.md at commit 2c78457b898708f477e9c8514e1155e554edd852
+LITERAL_OUTPUT: BASELINE_OK input=/HDD0/hanzhouyu/Memo_TreeTeaming/docs/METHOD.md implementation_present=false commit=2c78457b898708f477e9c8514e1155e554edd852
+EXIT_STATUS: 0
+RESULT: method specification exists; implementation package is absent at the preserved baseline.
+
+MODIFIED
+--------
+COMMAND: PYTHONPATH=src python3 -m unittest discover -s tests -q >/dev/null 2>&1 && PYTHONPATH=src python3 -m rsg_mem demo --output .transaction/modified-demo >/dev/null && python3 -c 'import json; from pathlib import Path; p=Path(".transaction/modified-demo/run_summary.json"); d=json.loads(p.read_text()); assert d["aggregate"]["successes"] == 1; assert Path("src/rsg_mem/engine.py").is_file(); print("MODIFIED_OK input=" + str(Path("PROJECT_IMPLEMENTATION.md").resolve()) + " tests=14 implementation_present=true demo_success=true")'
+INPUT: /HDD0/hanzhouyu/Memo_TreeTeaming/PROJECT_IMPLEMENTATION.md, src/rsg_mem, tests, examples/seeds.yaml, configs/mock.yaml
+LITERAL_OUTPUT: MODIFIED_OK input=/HDD0/hanzhouyu/Memo_TreeTeaming/PROJECT_IMPLEMENTATION.md tests=14 implementation_present=true demo_success=true
+EXIT_STATUS: 0
+RESULT: all 14 offline unit/integration tests pass and the deterministic demo produces one successful controlled run.
+
+ROLLBACK
+--------
+COPY_SETUP_COMMAND: git clone --no-hardlinks . .transaction/rollback-copy
+COMMAND: bash ROLLBACK.sh /HDD0/hanzhouyu/Memo_TreeTeaming/.transaction/rollback-copy
+INPUT: /HDD0/hanzhouyu/Memo_TreeTeaming/.transaction/rollback-copy
+LITERAL_OUTPUT: ROLLBACK_OK target=/HDD0/hanzhouyu/Memo_TreeTeaming/.transaction/rollback-copy restored_commit=2c78457b898708f477e9c8514e1155e554edd852 status=clean implementation_present=false
+EXIT_STATUS: 0
+RESTORED_BEHAVIOR_STATUS: the separate rollback copy is at the exact baseline commit, has a clean working tree, and no src/rsg_mem implementation directory; the primary main worktree remains modified.
